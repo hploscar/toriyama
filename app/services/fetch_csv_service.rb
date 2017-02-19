@@ -1,16 +1,14 @@
 class FetchCsvService
-  def initialize(params)
-    return "Error" if params[:url].blank?
+  require "open-uri"
 
-    @url = URI(params[:url])
+  def initialize(params)
+    raise ArgumentError, "Error" if params[:url].blank?
+
+    @url = params[:url]
   end
 
   def fetch
-    begin
-      download_file
-    rescue
-      "Error"
-    end
+    download_file
   end
 
   private
@@ -19,28 +17,25 @@ class FetchCsvService
 
   def download_file
     time = Time.new
-    filename = "#{time.year}-#{time.month}-#{time.day}.csv"
-    @req = Net::HTTP::Get.new(url)
+    filename = "files/#{time.year}-#{time.month}-#{time.day}.csv"
+
+    uri = URI.parse(url)
+    req = Net::HTTP.new(uri.host, uri.port)
+    req.use_ssl = true if uri.scheme == 'https'
 
     begin
-      Net::HTTP.start(url.hostname, url.port) do |http|
-        resp = http.request(@req)
+      req.get(uri.path) do |http|
+        open(filename, "wb") do |file|
+          file.write(http)
+        end
       end
-    rescue
-      "Error"
-    end
 
-    begin
-      puts resp.body
-      open(filename, "wb") do |file|
-        file.write(resp.body)
-      end
       filename
+
     rescue
-      "Error"
+      raise URI::Error
     end
 
-    #(url.eql? "http://www.google.es") ? filename : "Error"
   end
 
 end
